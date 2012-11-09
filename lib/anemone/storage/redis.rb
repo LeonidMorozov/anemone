@@ -9,8 +9,21 @@ module Anemone
       def initialize(opts = {})
         @redis = ::Redis.new(opts)
         @key_prefix = opts[:key_prefix] || 'anemone'
+        #clean
+      end
+
+      def clean()
         keys.each { |key| delete(key) }
       end
+
+      #def loaddata(link_queue, page_queue)
+      #  keys.each do |key|
+      #    data = rget(rkey)
+      #    link_queue.enq(data['url'], data['referer'], data['depth']) if !data.key?('visited')
+      #    page_queue.enq(data) if data.key?('visited')
+      #  end
+      #  return link_queue, page_queue
+      #end
 
       def [](key)
         rkey = "#{@key_prefix}:pages:#{key.to_s}"

@@ -10,6 +10,19 @@ module Anemone
       @storage = storage
     end
 
+    def loaddata(link_queue)
+      @storage.keys.each do |key|
+        data = @storage[key]
+        #data.visited == nil ? link_queue.enq([data.url, data.referer, data.depth]) : page_queue.enq(data)
+        link_queue.enq([data.url, data.referer, data.depth]) if data.visited == nil
+      end
+      return link_queue
+    end
+
+    def clean_db
+      @storage.clear
+    end
+
     # We typically index the hash with a URI,
     # but convert it to a String for easier retrieval
     def [](index)

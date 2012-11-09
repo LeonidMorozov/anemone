@@ -6,10 +6,11 @@ require 'anemone/exceptions'
 require 'anemone/page_store'
 require 'anemone/storage'
 require 'anemone/storage/base'
+require 'anemone/proxy_list'
 
 module Anemone
 
-  VERSION = '0.7.2';
+  VERSION = '0.7.2'
 
   #
   # Convenience method to start a crawl
@@ -44,16 +45,20 @@ module Anemone
       :redirect_limit => 5,
       # storage engine defaults to Hash in +process_options+ if none specified
       :storage => nil,
+      # clean storage engine before crawl
+      :force_start => true,
       # Hash of cookie name => value to send with HTTP requests
       :cookies => nil,
       # accept cookies from the server and send them back?
       :accept_cookies => false,
       # skip any link with a query string? e.g. http://foo.com/?u=user
       :skip_query_strings => false,
-      # proxy server hostname 
+      # proxy server hostname
       :proxy_host => nil,
       # proxy server port number
       :proxy_port => false,
+      # proxy list
+      :proxy_list => [],
       # HTTP read timeout in seconds
       :read_timeout => nil
     }
@@ -79,6 +84,9 @@ module Anemone
       @skip_link_patterns = []
       @after_crawl_blocks = []
       @opts = opts
+      @stop_crawl = false
+
+      ProxyList.load(@opts[:proxy_list])
 
       yield self if block_given?
     end
@@ -143,13 +151,32 @@ module Anemone
     end
 
     #
+    # Signals the crawler that it should stop the crawl before visiting the
+    # next page.
+    #
+    # This method is expected to be called within a page block, and it signals
+    # the crawler that it must stop after the current page is completely
+    # processed.  All pages and links currently on queue are discared.
+    def stop_crawl
+      @stop_crawl = true
+    end
+
+    def set_new_proxy
+      ProxyList.new_proxy
+    end
+
+    def clean_db
+      @pages.clean_db
+    end
+
+    #
     # Perform the crawl
     #
     def run
       process_options
 
       @urls.delete_if { |url| !visit_link?(url) }
-      return if @urls.empty?
+      return if (@opts[:force_start] && @urls.empty?)
 
       link_queue = Queue.new
       page_queue = Queue.new
@@ -159,6 +186,9 @@ module Anemone
       end
 
       @urls.each{ |url| link_queue.enq(url) }
+      p "link_queue.size before loaddata: #{link_queue.size}" if @opts[:verbose]
+      link_queue = @pages.loaddata(link_queue)
+      p "link_queue.size after loaddata: #{link_queue.size}" if @opts[:verbose]
 
       loop do
         page = page_queue.deq
@@ -166,6 +196,12 @@ module Anemone
         puts "#{page.url} Queue: #{link_queue.size}" if @opts[:verbose]
         do_page_blocks page
         page.discard_doc! if @opts[:discard_page_bodies]
+
+        #begin
+        #  #p "link_queue: #{link_queue.inspect}"
+        #  #p "page_queue: #{page_queue.inspect}"
+        #  exit
+        #end if link_queue.size >= start_size + 100
 
         links = links_to_follow page
         links.each do |link|
@@ -180,7 +216,7 @@ module Anemone
           until link_queue.num_waiting == @tentacles.size
             Thread.pass
           end
-          if page_queue.empty?
+          if page_queue.empty? || @stop_crawl
             @tentacles.size.times { link_queue << :END }
             break
           end
@@ -189,16 +225,19 @@ module Anemone
 
       @tentacles.each { |thread| thread.join }
       do_after_crawl_blocks
+      clean_db
       self
     end
 
     private
 
     def process_options
+      #p "exec process_options" if @opts[:verbose]
       @opts = DEFAULT_OPTS.merge @opts
       @opts[:threads] = 1 if @opts[:delay] > 0
       storage = Anemone::Storage::Base.new(@opts[:storage] || Anemone::Storage.Hash)
       @pages = PageStore.new(storage)
+      @pages.clean_db if @opts[:force_start]
       @robots = Robotex.new(@opts[:user_agent]) if @opts[:obey_robots_txt]
 
       freeze_options
@@ -281,7 +320,7 @@ module Anemone
         false
       end
     end
-    
+
     #
     # Returns +true+ if *link* should not be visited because
     # it has a query string and +skip_query_strings+ is true.

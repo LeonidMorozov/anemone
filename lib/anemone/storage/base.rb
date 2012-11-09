@@ -15,6 +15,12 @@ module Anemone
         end
       end
 
+      #def loaddata(link_queue, page_queue)
+        #@adap.loaddata(link_queue, page_queue)
+        #rescue
+        #  raise InsertionError, $!
+      #end
+
       def [](key)
         @adap[key]
         rescue

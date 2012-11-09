@@ -1,6 +1,7 @@
 require 'net/https'
 require 'anemone/page'
 require 'anemone/cookie_store'
+require 'anemone/proxy_list'
 
 module Anemone
   class HTTP
@@ -13,7 +14,13 @@ module Anemone
     def initialize(opts = {})
       @connections = {}
       @opts = opts
+      @proxy_opts = {:proxy_host => @opts[:proxy_host], :proxy_port=>@opts[:proxy_port]}
       @cookie_store = CookieStore.new(@opts[:cookies])
+    end
+
+    def set_proxy(p_addr, p_port)
+      @proxy_opts[:proxy_host] = p_addr
+      @proxy_opts[:proxy_port] = p_port
     end
 
     #
@@ -78,14 +85,21 @@ module Anemone
     # The proxy address string
     #
     def proxy_host
-      @opts[:proxy_host]
+      @proxy_opts[:proxy_host]
     end
 
     #
     # The proxy port
     #
     def proxy_port
-      @opts[:proxy_port]
+      @proxy_opts[:proxy_port]
+    end
+
+    #
+    # The proxy host:port string
+    #
+    def proxy_host_port
+      (proxy_host == nil || proxy_port == nil) ? '' : proxy_host.to_s + ":" + proxy_port.to_s
     end
 
     #
@@ -151,6 +165,17 @@ module Anemone
 
     def connection(url)
       @connections[url.host] ||= {}
+
+      begin
+        new_proxy = ProxyList.get_proxy
+        begin
+          new_proxy_parts = new_proxy.split(":")
+          set_proxy new_proxy_parts[0], new_proxy_parts[1]
+        end if new_proxy != nil
+        set_proxy nil, nil if new_proxy == nil
+        refresh_connection url
+
+      end if proxy_host_port != ProxyList.get_proxy
 
       if conn = @connections[url.host][url.port]
         return conn
