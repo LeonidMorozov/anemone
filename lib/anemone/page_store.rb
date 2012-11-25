@@ -20,7 +20,7 @@ module Anemone
     end
 
     def clean_db
-      @storage.clear
+      @storage.clean
     end
 
     # We typically index the hash with a URI,

@@ -21,6 +21,12 @@ module Anemone
         #  raise InsertionError, $!
       #end
 
+      def clean()
+        @adap.clean
+        rescue
+          raise CloseError, $!
+      end
+
       def [](key)
         @adap[key]
         rescue

@@ -60,7 +60,9 @@ module Anemone
       # proxy list
       :proxy_list => [],
       # HTTP read timeout in seconds
-      :read_timeout => nil
+      :read_timeout => nil,
+      # clean storage engine before crawl
+      :clean_db_only => false
     }
 
     # Create setter methods for all options to be called from the crawl block
@@ -166,7 +168,7 @@ module Anemone
     end
 
     def clean_db
-      @pages.clean_db
+      @pages.clean_db if @pages != nil
     end
 
     #
@@ -174,6 +176,7 @@ module Anemone
     #
     def run
       process_options
+      return if @opts[:clean_db_only]
 
       @urls.delete_if { |url| !visit_link?(url) }
       return if (@opts[:force_start] && @urls.empty?)
@@ -233,6 +236,7 @@ module Anemone
 
     def process_options
       #p "exec process_options" if @opts[:verbose]
+      return if @opts.frozen?
       @opts = DEFAULT_OPTS.merge @opts
       @opts[:threads] = 1 if @opts[:delay] > 0
       storage = Anemone::Storage::Base.new(@opts[:storage] || Anemone::Storage.Hash)
