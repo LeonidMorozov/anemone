@@ -21,8 +21,8 @@ module Anemone
         #  raise InsertionError, $!
       #end
 
-      def clean()
-        @adap.clean
+      def clear()
+        @adap.clear
         rescue
           raise CloseError, $!
       end

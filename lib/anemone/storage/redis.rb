@@ -12,7 +12,7 @@ module Anemone
         #clean
       end
 
-      def clean()
+      def clear()
         p "exec Anemone Redis::clean"
         keys.each { |key| delete(key) }
       end
