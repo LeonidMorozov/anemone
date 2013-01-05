@@ -167,6 +167,13 @@ module Anemone
       ProxyList.new_proxy
     end
 
+    #
+    # Returns current proxy or +nil+
+    #
+    def current_proxy()
+	    ProxyList.get_proxy
+    end
+
     def clean_db
       @pages.clean_db if @pages != nil
     end
@@ -340,6 +347,7 @@ module Anemone
     def skip_link?(link)
       @skip_link_patterns.any? { |pattern| link.path =~ pattern }
     end
+
 
   end
 end
