@@ -109,6 +109,20 @@ module Anemone
       @opts[:read_timeout]
     end
 
+    #
+    # HTTP retries limit
+    #
+    def retries_limit
+      @opts[:retries_limit]
+    end
+
+    #
+    # proxy changes limit
+    #
+    def proxy_changes_limit
+      @opts[:proxy_changes_limit]
+    end
+
     private
 
     #
@@ -144,6 +158,7 @@ module Anemone
       opts['Cookie'] = @cookie_store.to_s unless @cookie_store.empty? || (!accept_cookies? && @opts[:cookies].nil?)
 
       retries = 0
+      retries_in_proxy = 0
       begin
         start = Time.now()
         # format request
@@ -157,9 +172,14 @@ module Anemone
         return response, response_time
       rescue Timeout::Error, Net::HTTPBadResponse, EOFError => e
         puts e.inspect if verbose?
+        if retries_in_proxy > retries_limit
+	        retries += 1
+	        ProxyList.new_proxy
+	        retries_in_proxy=0
+        end
         refresh_connection(url)
-        retries += 1
-        retry unless retries > 3
+        retries_in_proxy += 1
+        retry unless retries > proxy_changes_limit
       end
     end
 

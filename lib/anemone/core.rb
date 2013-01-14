@@ -61,6 +61,10 @@ module Anemone
       :proxy_list => [],
       # HTTP read timeout in seconds
       :read_timeout => nil,
+      # HTTP retries limit
+      :retries_limit => 3,
+      # proxy changes limit
+      :proxy_changes_limit => 3,
       # clean storage engine before crawl
       :clean_db_only => false
     }
