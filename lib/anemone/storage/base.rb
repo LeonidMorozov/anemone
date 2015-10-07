@@ -7,8 +7,8 @@ module Anemone
       def initialize(adapter)
         @adap = adapter
 
-        # verify adapter conforms to this class's methods
-        methods.each do |method|
+        required_methods = [:clear ,:[] ,:[]= ,:delete ,:each ,:merge! ,:close ,:size ,:keys ,:has_key?]
+        required_methods.each do |method|.each do |method|
           if !@adap.respond_to?(method.to_sym)
             raise "Storage adapter must support method #{method}"
           end
